@@ -164,11 +164,11 @@ cv::Mat render_event(std::vector<Event>& events, int width, int height){
 	// Drawing The image
 	std::vector<Event>::iterator event;
 	uchar render_intensity=100;
-	for(event = events.begin(); event != events.end(); ++event){
-		if (event->polarity_ == 1.0){ // Positive Event has +1 polarity
-			pos_event.at<uchar>(cv::Point(event->x_, event->y_)) = render_intensity;
-		}else if (event->polarity_ == -1.0){
-			neg_event.at<uchar>(cv::Point(event->x_, event->y_)) = render_intensity;
+	for(Event& event: events){
+		if (event.polarity_ == 1.0){ // Positive Event has +1 polarity
+			pos_event.at<uchar>(cv::Point(event.x_, event.y_)) = render_intensity;
+		}else if (event.polarity_ == -1.0){
+			neg_event.at<uchar>(cv::Point(event.x_, event.y_)) = render_intensity;
 		}
 	}
 
