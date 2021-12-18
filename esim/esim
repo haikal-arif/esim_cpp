@@ -61,6 +61,9 @@ public:
 
   // imageCallback will generate event from images
   void imageCallback(const cv::Mat& img, double time, std::vector<Event>& events);
+
+  bool IsUseLog() { return use_log_img_; }
+  float getLogEps() { return log_eps_; }
 private:
       
   Eigen::MatrixXd vec_to_eigen_matrix(std::vector<Event>& events_vec)
