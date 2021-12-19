@@ -4,7 +4,6 @@
 #include <queue>
 #include <thread>
 #include <mutex>
-#include <iterator>
 #include <iostream>
 
 #include <opencv2/core.hpp>
@@ -96,12 +95,8 @@ int main(int argc, char* argv[]){
 			int new_width, new_height, col_from, col_to;
 			cv::Mat curr_image(cv::Size(width, height), CV_8UC3), gray_image(cv::Size(width, height), CV_8UC1);
 			vcap >> curr_image;
-			// cv::imshow("Frame", curr_image);
-			// cv::waitKey(0);
 			cv::cvtColor(curr_image, gray_image, cv::COLOR_BGR2GRAY);
-			// std::cout << "till here\n";
 			gray_image.convertTo(gray_image, CV_32F, 1.0 / 255);
-			// std::cout << "converted\n";
 			og_image_queue.push(gray_image);
 		}
 
@@ -162,7 +157,6 @@ cv::Mat render_event(std::vector<Event>& events, int width, int height){
 		mask(height, width, CV_8UC1, cv::Scalar(0));
 
 	// Drawing The image
-	std::vector<Event>::iterator event;
 	uchar render_intensity=100;
 	for(Event& event: events){
 		if (event.polarity_ == 1.0){ // Positive Event has +1 polarity
@@ -174,9 +168,9 @@ cv::Mat render_event(std::vector<Event>& events, int width, int height){
 
 
 	std::vector<cv::Mat> channels;
-	channels.push_back(pos_event);
-	channels.push_back(mask);
-	channels.push_back(neg_event);
+	channels.push_back(mask); // B
+	channels.push_back(neg_event); // G
+	channels.push_back(pos_event); // R
 
 	cv::Mat final_img;
 
