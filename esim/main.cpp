@@ -143,6 +143,7 @@ void render_event_wrapper(
 
 void write_video_wrapper(SafeQueue<cv::Mat>& rendered_img_queue, const int fourcc, const int fps, const cv::Size size, const int frame_count){
 	cv::VideoWriter writer("output.mp4", fourcc, fps, size);
+	std::filesystem::create_directory("output");
 	for (int frame_number=0; frame_number < (frame_count - 1); ++frame_number) {
 		cv::Mat curr_image = rendered_img_queue.front();
 		writer.write(curr_image);
