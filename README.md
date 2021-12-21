@@ -1,5 +1,5 @@
 # esim_cpp
-This is a C++ port from this repo https://github.com/uzh-rpg/rpg_vid2e.git
+This is a C++ console app from this repo https://github.com/uzh-rpg/rpg_vid2e.git
 
 HOW TO USE :
 
