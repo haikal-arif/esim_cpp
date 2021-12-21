@@ -19,27 +19,29 @@ class SafeQueue {
 
 public:
 	SafeQueue() :
-		_queue(), _mu(), _cond(){}
+		_queue(), _mu(), _send_cond(), _recv_cond() {}
 
 	~SafeQueue(){}
 	
 	void push(T& input_item) {
 		std::unique_lock<std::mutex> locker(_mu);
+		_send_cond.wait(locker, [this]() { return (_queue.size() < 10); });
 		_queue.push(input_item);
-		_cond.notify_one();
+		_recv_cond.notify_one();
 	}
 
 	T front() {
 		std::unique_lock<std::mutex> locker(_mu);
-		_cond.wait(locker, [this]() { return !_queue.empty(); }); // In case spurious wake
+		_recv_cond.wait(locker, [this]() { return !_queue.empty(); }); // In case spurious wake
 		T output = _queue.front();
 		_queue.pop();
+		_send_cond.notify_one();
 		return output;
 	}
 private:
 	std::queue<T> _queue;
 	std::mutex _mu;
-	std::condition_variable _cond;
+	std::condition_variable _recv_cond, _send_cond;
 };
 
 
@@ -85,17 +87,20 @@ int main(int argc, char* argv[]){
 		int frame_count = vcap.get(cv::CAP_PROP_FRAME_COUNT) - 1 ;
 		width = vcap.get(cv::CAP_PROP_FRAME_WIDTH);
 		height = vcap.get(cv::CAP_PROP_FRAME_HEIGHT);
-		int codec = 0x00000021;
+		int codec = 0x00000021; // MJPEG
 
 		std::thread event_generation_thread(event_generation_wrapper, std::ref(esim), std::ref(og_image_queue), std::ref(event_queue), fps, frame_count);
 		std::thread render_thread(render_event_wrapper, std::ref(event_queue), std::ref(rendered_img_queue), width, height, frame_count);
 		std::thread write_thread(write_video_wrapper, std::ref(rendered_img_queue), codec, fps, cv::Size(width, height), frame_count);
 		// std::thread show_thread(show_vid, std::ref(rendered_img_queue));
 
+		cv::Mat mask(cv::Size(width, height), CV_8UC3, cv::Scalar(0));
 		for (int frame_number = 0; frame_number < frame_count; ++frame_number) {
 			int new_width, new_height, col_from, col_to;
 			cv::Mat curr_image(cv::Size(width, height), CV_8UC3), gray_image(cv::Size(width, height), CV_8UC1);
 			vcap >> curr_image;
+			if (curr_image.empty())
+				curr_image = mask;
 			cv::cvtColor(curr_image, gray_image, cv::COLOR_BGR2GRAY);
 			gray_image.convertTo(gray_image, CV_32F, 1.0 / 255);
 			og_image_queue.push(gray_image);
@@ -134,22 +139,19 @@ void render_event_wrapper(
 	int width, int height, int frame_count){
 	for (int frame_number = 0; frame_number < frame_count; ++frame_number) {
 		std::vector<Event> events = event_queue.front();
-		if (events.size()) {
-			cv::Mat rendered_image = render_event(events, width, height);
-			rendered_img_queue.push(rendered_image);
-		}
+		cv::Mat rendered_image = render_event(events, width, height);
+		rendered_img_queue.push(rendered_image);
 	}			
 }
 
 void write_video_wrapper(SafeQueue<cv::Mat>& rendered_img_queue, const int fourcc, const int fps, const cv::Size size, const int frame_count){
-	cv::VideoWriter writer("output.mp4", fourcc, fps, size);
-	std::filesystem::create_directory("output");
 	for (int frame_number=0; frame_number < (frame_count - 1); ++frame_number) {
 		cv::Mat curr_image = rendered_img_queue.front();
-		writer.write(curr_image);
-		std::cout << "wrote " << frame_number << "/" << (frame_count-1) << " of image \r";
+		std::string filename = fmt::format("./output_stream/image-{:04d}.jpg", frame_number);
+		cv::imwrite(filename, curr_image);
+		std::cout << "wrote " << (frame_number+1) << "/" << (frame_count-1) << " of image \r";
 	}
-
+	std::cout << "\nDone\n" << std::endl;
 }
 
 
