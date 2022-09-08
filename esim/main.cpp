@@ -13,6 +13,7 @@
 #include <fmt/core.h>
 
 #include "esim"
+// Test comment
 
 template<class T>
 class SafeQueue {
